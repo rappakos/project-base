@@ -38,3 +38,6 @@ TOP_K_JUDGE = int(os.getenv("TOP_K_JUDGE", "10"))
 
 # Search Configuration
 USE_TEXT_SEARCH = os.getenv("USE_TEXT_SEARCH", "true").lower() in ("true", "1", "yes")
+USE_VECTOR_SEARCH = os.getenv("USE_VECTOR_SEARCH", "false").lower() in ("true", "1", "yes")
+VECTOR_FIELD = os.getenv("VECTOR_FIELD", "vector")  # or whatever field name
+OPENAI_EMBEDDING_MODEL = os.getenv("OPENAI_EMBEDDING_MODEL", "text-embedding-ada-002")
