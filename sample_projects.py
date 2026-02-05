@@ -8,6 +8,7 @@ import asyncio
 import random
 from collections import defaultdict
 
+import aiosqlite
 import db
 import config
 
@@ -30,7 +31,8 @@ async def sample_projects(
     
     random.seed(seed)
     
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         # Get all projects
         projects = await db.get_all_projects(conn)
         
@@ -114,11 +116,14 @@ async def sample_projects(
             print(f"  {ind}: {count} ({pct:.1f}% of {original_count})")
         
         return sampled
+    finally:
+        await conn.close()
 
 
 async def get_coverage_stats():
     """Print coverage statistics for current sample."""
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         async with conn.execute(
             """
             SELECT industry, COUNT(*) as count 
@@ -138,6 +143,8 @@ async def get_coverage_stats():
         for industry, count in rows:
             print(f"  {industry}: {count} ({count/total*100:.1f}%)")
         print(f"Total: {total}")
+    finally:
+        await conn.close()
 
 
 if __name__ == "__main__":
