@@ -45,6 +45,8 @@ async def evaluate_queries(
     """
     top_k = top_k or config.TOP_K_RETRIEVAL
     
+    print(f"Text search enabled: {config.USE_TEXT_SEARCH}")
+
     # Check Elastic connection first
     if not elastic_client.check_connection():
         print("Cannot connect to Elasticsearch. Check your configuration.")
@@ -73,9 +75,16 @@ async def evaluate_queries(
         
         for i, query in enumerate(queries):
             try:
-                # Search Elasticsearch
+                # Get industry_id and skill_ids from the query
+                industry_id = query.get("industry_id")
+                skill_ids_json = query.get("skill_ids")
+                skill_ids = json.loads(skill_ids_json) if skill_ids_json else []
+                
+                # Search Elasticsearch with filters
                 results = elastic_client.search_projects(
                     query["query_text"],
+                    industry_id=industry_id,
+                    skill_ids=skill_ids,
                     top_k=top_k,
                     client=es_client
                 )

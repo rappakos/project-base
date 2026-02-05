@@ -6,7 +6,9 @@ CREATE TABLE IF NOT EXISTS projects (
     end_date TEXT,
     project_position TEXT,
     industry TEXT,
-    skills TEXT,  -- JSON array stored as text
+    industry_id INTEGER,  -- For ES filtering
+    skills TEXT,  -- JSON array of skill names
+    skill_ids TEXT,  -- JSON array of skill IDs for ES filtering
     contribution TEXT
 );
 
@@ -24,6 +26,8 @@ CREATE TABLE IF NOT EXISTS synthetic_queries (
     source_project_id INTEGER,  -- NULL for real requirements
     query_text TEXT NOT NULL,
     query_type TEXT NOT NULL,  -- 'specific', 'vague', or 'real'
+    industry_id INTEGER,  -- From source project for ES filtering
+    skill_ids TEXT,  -- JSON array from source project for ES filtering
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (source_project_id) REFERENCES projects(user_project_history_id)
 );
@@ -68,6 +72,7 @@ CREATE INDEX IF NOT EXISTS idx_synthetic_queries_source ON synthetic_queries(sou
 CREATE INDEX IF NOT EXISTS idx_evaluation_runs_query ON evaluation_runs(query_id);
 CREATE INDEX IF NOT EXISTS idx_judgments_query ON judgments(query_id);
 CREATE INDEX IF NOT EXISTS idx_projects_industry ON projects(industry);
+CREATE INDEX IF NOT EXISTS idx_projects_industry_id ON projects(industry_id);
 
 -- Views for analysis
 

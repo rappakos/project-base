@@ -24,44 +24,71 @@ def get_client() -> Elasticsearch:
 
 def search_projects(
     query_text: str,
+    industry_id: int = None,
+    skill_ids: list[int] = None,
     top_k: int = 20,
     client: Optional[Elasticsearch] = None
 ) -> list[dict]:
     """
-    Search projects in Elasticsearch.
+    Search projects in Elasticsearch with optional filtering.
     
+    Args:
+        query_text: The search query
+        industry_id: Filter by industry ID
+        skill_ids: Boost by skill IDs
+        top_k: Number of results to return
+        client: ES client instance
+        
     Returns list of dicts with 'id' and 'score' keys.
-    
-    This is a placeholder implementation - adjust the query structure
-    to match your actual Elastic index schema and search requirements.
     """
     if client is None:
         client = get_client()
     
-    # BM25 text search on main content and metadata fields
+    # Build query
     query = {
         "size": top_k,
         "query": {
             "bool": {
-                "should": [
-                    # Primary search on text content
-                    {
-                        "multi_match": {
-                            "query": query_text,
-                            "fields": [
-                                "text^3",  # Main project description
-                                "standardPositions^2",  # Job positions
-                                "metadata.displayName",  # Display name
-                                "metadata.referenceName",  # Reference name
-                                "metadata.standardPositions"  # Standard positions in metadata
-                            ],
-                            "type": "best_fields"
-                        }
-                    }
-                ]
+                "must": [],
+                "filter": [],
+                "should": []
             }
         }
     }
+    
+    # Add text search if enabled
+    if config.USE_TEXT_SEARCH:
+        query["query"]["bool"]["must"].append({
+            "multi_match": {
+                "query": query_text,
+                "fields": [
+                    "text^3",
+                    "metadata.referenceName",
+                    "metadata.standardPositions"
+                ],
+                "type": "best_fields"
+            }
+        })
+    else:
+        # If no text search, use match_all to get all docs (filtered by industry/skills)
+        query["query"]["bool"]["must"].append({"match_all": {}})
+    
+    # Add industry filter if provided
+    if industry_id is not None:
+        query["query"]["bool"]["filter"].append({
+            "term": {"metadata.industryID": industry_id}
+        })
+    
+    # Add skill boosting if provided
+    if skill_ids:
+        query["query"]["bool"]["should"].append({
+            "terms": {
+                "metadata.skillIDs": skill_ids,
+                "boost": 2.0
+            }
+        })
+        # Make should clause optional but boost matching docs
+        query["query"]["bool"]["minimum_should_match"] = 0
     
     # If your index has a vector field, add kNN search
     # Uncomment and adjust as needed:
@@ -105,7 +132,7 @@ def check_connection() -> bool:
     try:
         client = get_client()
         result = client.ping()
-        print(f"Ping returned: {result} (type: {type(result)})")
+        #print(f"Ping returned: {result} (type: {type(result)})")
         return result is True or result == True
     except Exception as e:
         print(f"Elasticsearch connection failed: {e}")

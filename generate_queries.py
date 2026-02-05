@@ -169,7 +169,9 @@ async def generate_all_queries(batch_size: int = 10, skip_existing: bool = True)
                         conn,
                         project["user_project_history_id"],
                         specific,
-                        "specific"
+                        "specific",
+                        industry_id=project.get("industry_id"),
+                        skill_ids=project.get("skill_ids")
                     )
                 
                 if vague:
@@ -177,7 +179,9 @@ async def generate_all_queries(batch_size: int = 10, skip_existing: bool = True)
                         conn,
                         project["user_project_history_id"],
                         vague,
-                        "vague"
+                        "vague",
+                        industry_id=project.get("industry_id"),
+                        skill_ids=project.get("skill_ids")
                     )
                 
                 generated += 1

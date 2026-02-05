@@ -35,3 +35,6 @@ MIN_PER_INDUSTRY = int(os.getenv("MIN_PER_INDUSTRY", "5"))
 # Evaluation Configuration
 TOP_K_RETRIEVAL = int(os.getenv("TOP_K_RETRIEVAL", "20"))
 TOP_K_JUDGE = int(os.getenv("TOP_K_JUDGE", "10"))
+
+# Search Configuration
+USE_TEXT_SEARCH = os.getenv("USE_TEXT_SEARCH", "true").lower() in ("true", "1", "yes")

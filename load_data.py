@@ -38,6 +38,23 @@ async def load_projects(analyser: Analyser):
             else:
                 skills_list = [s.strip() for s in str(skills_str).split(',') if s.strip()]
             
+            # Extract IndustryID
+            industry_id = None
+            if pd.notna(row.get('IndustryID')):
+                try:
+                    industry_id = int(row['IndustryID'])
+                except (ValueError, TypeError):
+                    pass
+            
+            # Extract SkillIDs from comma-separated string
+            skill_ids_str = row.get('SkillIDs', '')
+            skill_ids_list = []
+            if pd.notna(skill_ids_str) and skill_ids_str:
+                try:
+                    skill_ids_list = [int(s.strip()) for s in str(skill_ids_str).split(',') if s.strip().isdigit()]
+                except (ValueError, TypeError):
+                    pass
+            
             # Handle nullable dates - convert to ISO string or None
             start_date = None
             end_date = None
@@ -61,7 +78,9 @@ async def load_projects(analyser: Analyser):
                     end_date=end_date,
                     project_position=row.get('ProjectPosition') if pd.notna(row.get('ProjectPosition')) else None,
                     industry=row.get('IndustryName') if pd.notna(row.get('IndustryName')) else None,
+                    industry_id=industry_id,
                     skills=skills_list,
+                    skill_ids=skill_ids_list,
                     contribution=row.get('Contribution') if pd.notna(row.get('Contribution')) else None
                 )
                 loaded_count += 1
@@ -77,7 +96,7 @@ async def load_projects(analyser: Analyser):
                     print(f"  Warning: Skipped project {row['UserProjectHistoryID']}: {e}")
         
         await conn.commit()
-        print(f"✓ Completed loading {loaded_count} projects ({skipped_count} skipped)")
+        print(f"[OK] Completed loading {loaded_count} projects ({skipped_count} skipped)")
         
         # Show industry distribution
         print("\nIndustry distribution:")
@@ -125,7 +144,7 @@ async def load_requirements(analyser: Analyser):
                     None,  # No source project for real requirements
                     query_text,
                     'real',  # Distinguish from synthetic queries
-                    datetime.utcnow().isoformat()
+                    datetime.now().isoformat()
                 )
             )
             loaded_count += 1
@@ -135,7 +154,7 @@ async def load_requirements(analyser: Analyser):
                 print(f"  Loaded {loaded_count} requirements...")
         
         await conn.commit()
-        print(f"✓ Completed loading {loaded_count} requirements")
+        print(f"[OK] Completed loading {loaded_count} requirements")
         
         # Show sample queries
         print("\nSample requirements:")
@@ -158,11 +177,6 @@ async def main():
     print("Decidalo Data Loader for Project Evaluation")
     print("=" * 60)
     
-    # Initialize database
-    print("\nInitializing database...")
-    await db.init_db()
-    print("✓ Database initialized")
-    
     # Create analyser instance
     analyser = Analyser()
     
@@ -182,7 +196,7 @@ async def main():
         await conn.close()
     
     print("\n" + "=" * 60)
-    print(f"✓ Load complete: {project_count} projects, {requirement_count} requirements")
+    print(f"[OK] Load complete: {project_count} projects, {requirement_count} requirements")
     print("=" * 60)
     print("\nNext steps:")
     print("  1. python sample_projects.py          # Sample projects by industry")

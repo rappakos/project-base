@@ -36,15 +36,17 @@ async def insert_project(
     end_date: Optional[str],
     project_position: Optional[str],
     industry: Optional[str],
+    industry_id: Optional[int],
     skills: list[str],
+    skill_ids: list[int],
     contribution: Optional[str]
 ):
     """Insert a project into the projects table."""
     await db.execute(
         """
         INSERT OR REPLACE INTO projects 
-        (user_project_history_id, user_id, start_date, end_date, project_position, industry, skills, contribution)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        (user_project_history_id, user_id, start_date, end_date, project_position, industry, industry_id, skills, skill_ids, contribution)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """,
         (
             user_project_history_id,
@@ -53,7 +55,9 @@ async def insert_project(
             end_date,
             project_position,
             industry,
+            industry_id,
             json.dumps(skills) if skills else "[]",
+            json.dumps(skill_ids) if skill_ids else "[]",
             contribution
         )
     )
@@ -69,6 +73,7 @@ async def get_all_projects(db: aiosqlite.Connection) -> list[dict]:
     for row in rows:
         project = dict(zip(columns, row))
         project["skills"] = json.loads(project["skills"]) if project["skills"] else []
+        project["skill_ids"] = json.loads(project["skill_ids"]) if project["skill_ids"] else []
         projects.append(project)
     
     return projects
@@ -86,6 +91,7 @@ async def get_project_by_id(db: aiosqlite.Connection, project_id: int) -> Option
         columns = [description[0] for description in cursor.description]
         project = dict(zip(columns, row))
         project["skills"] = json.loads(project["skills"]) if project["skills"] else []
+        project["skill_ids"] = json.loads(project["skill_ids"]) if project["skill_ids"] else []
         return project
 
 
@@ -104,6 +110,7 @@ async def get_sampled_projects(db: aiosqlite.Connection) -> list[dict]:
     for row in rows:
         project = dict(zip(columns, row))
         project["skills"] = json.loads(project["skills"]) if project["skills"] else []
+        project["skill_ids"] = json.loads(project["skill_ids"]) if project["skill_ids"] else []
         projects.append(project)
     
     return projects
@@ -119,17 +126,21 @@ async def insert_sampled_project(db: aiosqlite.Connection, project_id: int, indu
 
 async def insert_synthetic_query(
     db: aiosqlite.Connection,
-    source_project_id: int,
+    source_project_id: Optional[int],
     query_text: str,
-    query_type: str
+    query_type: str,
+    industry_id: Optional[int] = None,
+    skill_ids: Optional[list] = None
 ) -> int:
     """Insert a synthetic query and return its ID."""
+    skill_ids_json = json.dumps(skill_ids) if skill_ids else None
+    
     cursor = await db.execute(
         """
-        INSERT INTO synthetic_queries (source_project_id, query_text, query_type)
-        VALUES (?, ?, ?)
+        INSERT INTO synthetic_queries (source_project_id, query_text, query_type, industry_id, skill_ids)
+        VALUES (?, ?, ?, ?, ?)
         """,
-        (source_project_id, query_text, query_type)
+        (source_project_id, query_text, query_type, industry_id, skill_ids_json)
     )
     return cursor.lastrowid
 
