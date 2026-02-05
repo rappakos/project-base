@@ -29,6 +29,19 @@ def get_llm_client():
         )
 
 
+async def get_real_requirement_examples(conn: aiosqlite.Connection, n: int = 5) -> list[str]:
+    """Fetch real requirement examples from the database."""
+    async with conn.execute(
+        """SELECT query_text FROM synthetic_queries 
+           WHERE query_type = 'real' 
+           ORDER BY RANDOM() 
+           LIMIT ?""",
+        (n,)
+    ) as cursor:
+        rows = await cursor.fetchall()
+    return [row[0] for row in rows]
+
+
 def format_project_for_prompt(project: dict) -> str:
     """Format a project for the LLM prompt."""
     skills = project.get("skills", [])
@@ -45,16 +58,28 @@ Contribution: {contribution or 'not specified'}
 Duration: {project.get('start_date') or '?'} to {project.get('end_date') or '?'}"""
 
 
-def generate_queries_for_project(client: OpenAI, project: dict) -> tuple[str, str]:
+def generate_queries_for_project(client: OpenAI, project: dict, real_examples: list[str] = None) -> tuple[str, str]:
     """
     Generate specific and vague queries for a project.
+    
+    Args:
+        client: OpenAI client
+        project: Project dictionary with details
+        real_examples: List of real requirement examples to use as few-shot examples
     
     Returns (specific_query, vague_query)
     """
     project_text = format_project_for_prompt(project)
     
-    prompt = f"""You are helping create test queries for a project search system.
-
+    # Build examples section if we have real requirements
+    examples_section = ""
+    if real_examples:
+        examples_section = "\n\nHere are examples of real queries that recruiters have used:\n"
+        for i, example in enumerate(real_examples[:5], 1):
+            examples_section += f"{i}. \"{example}\"\n"
+        examples_section += "\nGenerate queries in a similar style and format.\n"
+    
+    prompt = f"""You are helping create test queries for a project search system.{examples_section}
 Given this project from someone's work history:
 {project_text}
 
@@ -92,6 +117,13 @@ async def generate_all_queries(batch_size: int = 10, skip_existing: bool = True)
     
     conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
     try:
+        # Get real requirement examples
+        real_examples = await get_real_requirement_examples(conn, n=10)
+        if real_examples:
+            print(f"Using {len(real_examples)} real requirements as style examples")
+        else:
+            print("Warning: No real requirements found. Generating without examples.")
+        
         # Get sampled projects
         projects = await db.get_sampled_projects(conn)
         
@@ -130,7 +162,7 @@ async def generate_all_queries(batch_size: int = 10, skip_existing: bool = True)
         
         for i, project in enumerate(projects_to_process):
             try:
-                specific, vague = generate_queries_for_project(client, project)
+                specific, vague = generate_queries_for_project(client, project, real_examples)
                 
                 if specific:
                     await db.insert_synthetic_query(

@@ -135,8 +135,10 @@ async def insert_synthetic_query(
 
 
 async def get_synthetic_queries(db: aiosqlite.Connection) -> list[dict]:
-    """Get all synthetic queries."""
-    async with db.execute("SELECT * FROM synthetic_queries") as cursor:
+    """Get all synthetic queries (excluding real requirements without source projects)."""
+    async with db.execute(
+        "SELECT * FROM synthetic_queries WHERE source_project_id IS NOT NULL"
+    ) as cursor:
         columns = [description[0] for description in cursor.description]
         rows = await cursor.fetchall()
     
@@ -144,12 +146,13 @@ async def get_synthetic_queries(db: aiosqlite.Connection) -> list[dict]:
 
 
 async def get_unevaluated_queries(db: aiosqlite.Connection) -> list[dict]:
-    """Get synthetic queries that haven't been evaluated yet."""
+    """Get synthetic queries that haven't been evaluated yet (excluding real requirements)."""
     async with db.execute(
         """
         SELECT sq.* FROM synthetic_queries sq
         LEFT JOIN evaluation_runs er ON sq.query_id = er.query_id
         WHERE er.run_id IS NULL
+        AND sq.source_project_id IS NOT NULL
         """
     ) as cursor:
         columns = [description[0] for description in cursor.description]

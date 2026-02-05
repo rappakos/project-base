@@ -9,6 +9,7 @@ For each synthetic query:
 
 import asyncio
 from typing import Optional
+import aiosqlite
 
 import db
 import config
@@ -51,7 +52,8 @@ async def evaluate_queries(
     
     es_client = elastic_client.get_client()
     
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         # Get queries to evaluate
         if skip_existing:
             queries = await db.get_unevaluated_queries(conn)
@@ -126,11 +128,14 @@ async def evaluate_queries(
             print(f"  Hit Rate @{top_k}: {hit_rate:.2%}")
             print(f"  Hits: {hits}/{n_evaluated}")
             print(f"{'='*50}")
+    finally:
+        await conn.close()
 
 
 async def show_metrics():
     """Display evaluation metrics from database views."""
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         # Overall MRR
         async with conn.execute("SELECT * FROM v_mrr_overall") as cursor:
             row = await cursor.fetchone()
@@ -173,11 +178,14 @@ async def show_metrics():
                     print(f"  {industry}: MRR={mrr:.4f}, hit_rate={hit_rate:.2%}, n={count}")
         
         print(f"{'='*50}")
+    finally:
+        await conn.close()
 
 
 async def show_failures(limit: int = 10):
     """Show queries where ground truth was not in top-10."""
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         async with conn.execute(
             f"SELECT * FROM v_failure_cases LIMIT {limit}"
         ) as cursor:
@@ -197,6 +205,8 @@ async def show_failures(limit: int = 10):
             print(f"  Skills: {case['skills'][:80]}...")
             print(f"  Rank: {case['ground_truth_rank'] or 'NOT FOUND'}")
             print()
+    finally:
+        await conn.close()
 
 
 if __name__ == "__main__":
@@ -208,5 +218,8 @@ if __name__ == "__main__":
         elif sys.argv[1] == "failures":
             limit = int(sys.argv[2]) if len(sys.argv) > 2 else 10
             asyncio.run(show_failures(limit))
+        elif sys.argv[1] == "--all":
+            # Evaluate all queries, including those already evaluated
+            asyncio.run(evaluate_queries(skip_existing=False))
     else:
         asyncio.run(evaluate_queries())
