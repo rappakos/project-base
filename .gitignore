@@ -1,7 +1,7 @@
 # Environment
 .env
 *.db
-
+*.xlsx
 # Python
 __pycache__/
 *.py[cod]

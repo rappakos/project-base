@@ -17,13 +17,15 @@ async def init_db():
     """Initialize the database with schema from init_db.sql."""
     schema_path = Path(__file__).parent / "init_db.sql"
     
-    async with await get_connection() as db:
+    db = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         with open(schema_path, "r") as f:
             schema = f.read()
         await db.executescript(schema)
         await db.commit()
-    
-    print(f"Database initialized: {config.SQLITE_DB_PATH}")
+        print(f"Database initialized: {config.SQLITE_DB_PATH}")
+    finally:
+        await db.close()
 
 
 async def insert_project(

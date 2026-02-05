@@ -7,10 +7,10 @@ load_dotenv()
 
 # LLM Configuration (Azure OpenAI)
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "azure")  # "azure" or "openai"
-LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o")  # deployment name for Azure
+LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4.1")  # deployment name for Azure
 
 # Azure OpenAI settings
-AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")  # e.g. https://xxx.openai.azure.com/
+AZURE_OPENAI_ENDPOINT = os.getenv("AZURE_OPENAI_ENDPOINT")
 AZURE_OPENAI_API_KEY = os.getenv("AZURE_OPENAI_API_KEY")
 AZURE_OPENAI_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "2024-08-01-preview")
 

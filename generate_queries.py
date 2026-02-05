@@ -9,6 +9,7 @@ import asyncio
 import json
 from openai import OpenAI, AzureOpenAI
 
+import aiosqlite
 import db
 import config
 
@@ -89,7 +90,8 @@ async def generate_all_queries(batch_size: int = 10, skip_existing: bool = True)
     """
     client = get_llm_client()
     
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         # Get sampled projects
         projects = await db.get_sampled_projects(conn)
         
@@ -168,11 +170,14 @@ async def generate_all_queries(batch_size: int = 10, skip_existing: bool = True)
         async with conn.execute("SELECT COUNT(*) FROM synthetic_queries") as cursor:
             total = (await cursor.fetchone())[0]
         print(f"  Total queries in database: {total}")
+    finally:
+        await conn.close()
 
 
 async def show_sample_queries(n: int = 5):
     """Show a sample of generated queries."""
-    async with await db.get_connection() as conn:
+    conn = await aiosqlite.connect(config.SQLITE_DB_PATH)
+    try:
         async with conn.execute(
             """
             SELECT sq.query_text, sq.query_type, p.industry, p.skills
@@ -194,6 +199,8 @@ async def show_sample_queries(n: int = 5):
             print(f"[{query_type.upper()}] {query_text}")
             print(f"  Industry: {industry}, Skills: {skills[:100]}...")
             print()
+    finally:
+        await conn.close()
 
 
 if __name__ == "__main__":

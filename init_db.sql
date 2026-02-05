@@ -21,9 +21,9 @@ CREATE TABLE IF NOT EXISTS sampled_projects (
 -- Synthetic queries generated from projects
 CREATE TABLE IF NOT EXISTS synthetic_queries (
     query_id INTEGER PRIMARY KEY AUTOINCREMENT,
-    source_project_id INTEGER NOT NULL,
+    source_project_id INTEGER,  -- NULL for real requirements
     query_text TEXT NOT NULL,
-    query_type TEXT NOT NULL,  -- 'specific' or 'vague'
+    query_type TEXT NOT NULL,  -- 'specific', 'vague', or 'real'
     created_at TEXT DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (source_project_id) REFERENCES projects(user_project_history_id)
 );
